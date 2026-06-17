@@ -1,17 +1,79 @@
-# kawax/composer-update-action
+# composer update action
 
-composer update and create pull request
+![update](https://github.com/kawax/composer-update-action/workflows/composer%20update/badge.svg)
+![test](https://github.com/kawax/composer-update-action/workflows/test/badge.svg)
+[![Maintainability](https://api.codeclimate.com/v1/badges/7a806f8e8f06017b9caf/maintainability)](https://codeclimate.com/github/kawax/composer-update-action/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/7a806f8e8f06017b9caf/test_coverage)](https://codeclimate.com/github/kawax/composer-update-action/test_coverage)
+[![Build Status](https://travis-ci.com/kawax/composer-update-action.svg?branch=master)](https://travis-ci.com/kawax/composer-update-action)
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/kawax/composer-update-action](https://github.com/kawax/composer-update-action).
+`composer update` and create pull request.
 
-## Versions
+## Version
+|ver|PHP|
+|---|---|
+|v1 |7.4|
+|master|latest|
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v1.1.0 | [`v1.1.0`](https://github.com/chainguard-actions/kawax-composer-update-action/tree/v1.1.0) | [`db4c6f6`](https://github.com/kawax/composer-update-action/commit/db4c6f6d9c8d785bd400fca4dd1ce6910ec832d0) |
-| v2.0.0 | [`v2.0.0`](https://github.com/chainguard-actions/kawax-composer-update-action/tree/v2.0.0) | [`a728495`](https://github.com/kawax/composer-update-action/commit/a728495afb27bf73a29372679b2c3b429aea9d43) |
-| v3.0.0 | [`v3.0.0`](https://github.com/chainguard-actions/kawax-composer-update-action/tree/v3.0.0) | [`ff82e4d`](https://github.com/kawax/composer-update-action/commit/ff82e4d675a24bc9ed3c1b764ca1e7392d05d4cc) |
-| v4.0.0 | [`v4.0.0`](https://github.com/chainguard-actions/kawax-composer-update-action/tree/v4.0.0) | [`a800d22`](https://github.com/kawax/composer-update-action/commit/a800d2246fbe6a17743e8f8e6ff6b9fcaefcc0bd) |
+## Usage
+
+Create `.github/workflows/update.yml`
+
+```yaml
+name: composer update
+
+on:
+  schedule:
+    - cron: '0 0 * * *' #UTC
+
+jobs:
+  composer_update_job:
+    runs-on: ubuntu-latest
+    name: composer update
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: composer update action
+        uses: kawax/composer-update-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## env
+- COMPOSER_PATH : Specify if using subdirectory. Where composer.json is located.
+- GIT_NAME : git user name
+- GIT_EMAIL : git email
+
+```yaml
+      - name: composer update action
+        uses: kawax/composer-update-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPOSER_PATH: /subdir
+          GIT_NAME: cu
+          GIT_EMAIL: cu@composer-update
+```
+
+## Troubleshooting
+
+### Missing PHP extension
+
+```
+foo/bar 1.0.0 requires ext-XXX * -> the requested PHP extension XXX is missing from your system.
+```
+
+Configure `platform` in your composer.json.
+
+```json
+  "config": {
+    "platform": {
+      "php": "7.2.0", 
+      "ext-XXX": "1.0.0"
+     }
+  },
+```
+
+## LICENCE
+MIT
 
 ## Privacy
 

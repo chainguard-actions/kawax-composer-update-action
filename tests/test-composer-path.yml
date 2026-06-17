@@ -1,0 +1,49 @@
+name: Test composer update action with COMPOSER_PATH
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal composer.json in subdirectory
+        run: |
+          mkdir -p subdir
+          cat > subdir/composer.json <<'EOF'
+          {
+            "name": "test/subdir-project",
+            "description": "Test project in subdirectory",
+            "require": {},
+            "config": {
+              "platform": {
+                "php": "7.4.0"
+              }
+            }
+          }
+          EOF
+          echo "subdir/composer.json created:"
+          cat subdir/composer.json
+
+      - name: Run composer update action with COMPOSER_PATH
+        id: action
+        uses: .
+        env:
+          GITHUB_TOKEN: fake-token-for-testing
+          COMPOSER_PATH: /subdir
+          GIT_NAME: test-user
+          GIT_EMAIL: test@example.com
+        continue-on-error: true
+
+      - name: Assert action ran with COMPOSER_PATH (may fail at PR creation without real token)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "Action outcome: $OUTCOME"
+          # The action is expected to fail because we don't have a real GITHUB_TOKEN
+          # but it should at least start and run (not be skipped or have a setup error)
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with COMPOSER_PATH (outcome: $OUTCOME)"

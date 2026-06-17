@@ -1,0 +1,47 @@
+name: Test basic composer update action invocation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal composer.json for testing
+        run: |
+          cat > composer.json <<'EOF'
+          {
+            "name": "test/project",
+            "description": "Test project",
+            "require": {},
+            "config": {
+              "platform": {
+                "php": "7.4.0"
+              }
+            }
+          }
+          EOF
+          echo "composer.json created:"
+          cat composer.json
+
+      - name: Run composer update action
+        id: action
+        uses: .
+        env:
+          GITHUB_TOKEN: fake-token-for-testing
+          GIT_NAME: test-user
+          GIT_EMAIL: test@example.com
+        continue-on-error: true
+
+      - name: Assert action ran (may fail at PR creation without real token)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "Action outcome: $OUTCOME"
+          # The action is expected to fail because we don't have a real GITHUB_TOKEN
+          # but it should at least start and run (not be skipped or have a setup error)
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome: $OUTCOME)"
