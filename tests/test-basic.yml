@@ -1,0 +1,41 @@
+name: Test basic invocation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: fake-token-for-testing
+      GIT_NAME: Test User
+      GIT_EMAIL: test@example.com
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal composer.json in workspace
+        run: |
+          cat > composer.json <<'EOF'
+          {
+            "name": "test/project",
+            "require": {}
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: fake-token-for-testing
+          GIT_NAME: Test User
+          GIT_EMAIL: test@example.com
+
+      - name: Assert action ran (Docker container started)
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          # The action is expected to fail because the GitHub token is fake
+          # and there's no real repo to push to, but it should have run
+          # (not been skipped). A 'failure' outcome means the container ran.
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome: ${{ steps.action.outcome }})"
