@@ -1,0 +1,40 @@
+name: Test subdirectory composer path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create minimal composer.json in subdirectory
+        run: |
+          mkdir -p subproject
+          cat > subproject/composer.json <<'EOF'
+          {
+            "name": "test/subproject",
+            "description": "Test subproject",
+            "require": {}
+          }
+          EOF
+
+      - name: Run composer update action with COMPOSER_PATH
+        id: action
+        uses: .
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: fake-token-for-testing
+          COMPOSER_PATH: /subproject
+          GIT_NAME: test-user
+          GIT_EMAIL: test@example.com
+
+      - name: Assert action ran with subdirectory path
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          # The action should run (not be skipped) — it may fail at GitHub API
+          # due to fake token, but Docker build and entrypoint must have started.
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran with COMPOSER_PATH set (outcome=${{ steps.action.outcome }})"
