@@ -1,0 +1,54 @@
+name: Test - only composer.json present (no lock file, early exit)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create composer.json without composer.lock
+        run: |
+          # Write a minimal composer.json with no dependencies.
+          # The action's exists() method requires BOTH composer.json AND composer.lock.
+          # Without composer.lock, exists() returns false and the action exits early.
+          cat > "$GITHUB_WORKSPACE/composer.json" <<'EOF'
+          {
+              "name": "test/composer-update-action-test",
+              "description": "Test project for composer-update-action",
+              "type": "project",
+              "require": {}
+          }
+          EOF
+          rm -f "$GITHUB_WORKSPACE/composer.lock"
+          echo "Created composer.json (no composer.lock)"
+          cat "$GITHUB_WORKSPACE/composer.json"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: refs/heads/act-harness
+          GIT_NAME: test-bot
+          GIT_EMAIL: test-bot@example.com
+          # Allow git to operate on the mounted workspace inside the Docker container
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: "*"
+
+      - name: Assert action completed cleanly (early exit without lock file)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          # With only composer.json (no composer.lock), exists() returns false
+          # and the action exits early with exit code 0.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action exited cleanly when composer.lock is absent"
+          else
+            echo "FAIL: action did not exit cleanly (outcome=$OUTCOME)"
+            exit 1
+          fi

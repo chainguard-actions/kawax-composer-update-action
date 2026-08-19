@@ -1,4 +1,4 @@
-name: Test - COMPOSER_PATH subdirectory (no composer files in subdir)
+name: Test - no composer files (early exit)
 on:
   workflow_dispatch:
 
@@ -8,15 +8,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Setup - create subdirectory without composer files
+      - name: Ensure no composer.json in workspace root
         run: |
-          # The action uses GITHUB_WORKSPACE + COMPOSER_PATH as the base path.
-          # If COMPOSER_PATH=/subdir, it looks in $GITHUB_WORKSPACE/subdir.
-          # We create the subdir but put no composer files inside it,
-          # so the action should exit early (exists() returns false).
-          mkdir -p "$GITHUB_WORKSPACE/subdir"
-          echo "Created subdir, no composer files inside it"
-          ls -la "$GITHUB_WORKSPACE/subdir"
+          # Make sure there's no composer.json at the workspace root
+          # so the action takes the early-exit path (exists() returns false)
+          rm -f "$GITHUB_WORKSPACE/composer.json" "$GITHUB_WORKSPACE/composer.lock"
+          echo "Workspace contents:"
+          ls -la "$GITHUB_WORKSPACE"
 
       - id: action
         uses: .
@@ -27,21 +25,20 @@ jobs:
           GITHUB_REF: refs/heads/act-harness
           GIT_NAME: test-bot
           GIT_EMAIL: test-bot@example.com
-          COMPOSER_PATH: /subdir
           # Allow git to operate on the mounted workspace inside the Docker container
           GIT_CONFIG_COUNT: "1"
           GIT_CONFIG_KEY_0: safe.directory
           GIT_CONFIG_VALUE_0: "*"
 
-      - name: Assert action exited cleanly (no composer files in COMPOSER_PATH subdir)
+      - name: Assert action completed (early exit when no composer files)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "action outcome: $OUTCOME"
-          # With COMPOSER_PATH=/subdir and no composer files in that subdir,
-          # exists() returns false and the action exits early with exit code 0.
+          # The action should exit cleanly (exit 0) when composer.json/composer.lock
+          # are not present — it returns early from the handle() method.
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action exited cleanly when COMPOSER_PATH subdir has no composer files"
+            echo "PASS: action exited cleanly with no composer files"
           else
             echo "FAIL: action did not exit cleanly (outcome=$OUTCOME)"
             exit 1
