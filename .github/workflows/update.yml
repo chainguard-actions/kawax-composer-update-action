@@ -1,0 +1,28 @@
+name: composer update
+
+on:
+  push:
+#    branches:
+#      - master
+  #    - v*
+  schedule:
+    - cron: '0 4 * * *' #UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  composer_update_job:
+    runs-on: ubuntu-latest
+    name: composer update
+    steps:
+      - name: Checkout
+        uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2
+      - name: composer update action
+        uses: kawax/composer-update-action@cdbeeb4dc83b68c4fb03ce82767c6497c6f27df2 # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
+          COMPOSER_PATH: /update
+          GIT_NAME: kawax
+          GIT_EMAIL: kawaxbiz@gmail.com

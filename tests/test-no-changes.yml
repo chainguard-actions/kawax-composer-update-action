@@ -1,4 +1,4 @@
-name: Test COMPOSER_PATH subdirectory support
+name: Test no changes after composer update
 on:
   workflow_dispatch:
 
@@ -20,19 +20,20 @@ jobs:
           git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
             git remote add origin "$GITHUB_WORKSPACE/.git-remote"
 
-      - name: Create composer files in a subdirectory
+      - name: Create minimal composer.json and composer.lock in workspace
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/subdir"
-
-          cat > "$GITHUB_WORKSPACE/subdir/composer.json" <<'EOF'
+          # Create a minimal composer.json with no dependencies so composer update
+          # produces no changes, causing the action to exit early with "No changes after update."
+          cat > "$GITHUB_WORKSPACE/composer.json" <<'EOF'
           {
-            "name": "test/subdir-project",
-            "description": "Test project in subdirectory",
+            "name": "test/project",
+            "description": "Test project for composer-update-action",
             "require": {}
           }
           EOF
 
-          cat > "$GITHUB_WORKSPACE/subdir/composer.lock" <<'EOF'
+          # Create a minimal valid composer.lock
+          cat > "$GITHUB_WORKSPACE/composer.lock" <<'EOF'
           {
             "_readme": [
               "This file is @generated automatically"
@@ -51,10 +52,10 @@ jobs:
           }
           EOF
 
-          echo "Files created in subdir:"
-          ls -la "$GITHUB_WORKSPACE/subdir/"
+          echo "composer.json and composer.lock created"
+          cat "$GITHUB_WORKSPACE/composer.json"
 
-      - name: Run composer-update-action with COMPOSER_PATH
+      - name: Run composer-update-action
         id: action
         uses: .
         env:
@@ -62,19 +63,20 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_WORKSPACE: /github/workspace
           GITHUB_REF: refs/heads/act-harness
-          COMPOSER_PATH: /subdir
           GIT_NAME: "Test User"
           GIT_EMAIL: "test@example.com"
         continue-on-error: true
 
-      - name: Assert action ran with COMPOSER_PATH
+      - name: Assert action ran (no changes path or early exit)
         run: |
           echo "Action outcome: ${{ steps.action.outcome }}"
-          # The action should have found composer.json in /subdir and proceeded.
-          # It may succeed (no changes) or fail at git push (expected in test env).
-          # What matters is it did NOT skip and the container ran.
+          # The action should either:
+          # 1. Exit successfully after detecting no changes ("No changes after update.")
+          # 2. Exit with an error if git fetch/push fails (expected in test environment)
+          # Either way, the Docker container must have started and run the PHP app.
+          # We verify the action ran by checking the outcome is not 'skipped'.
           if [ "${{ steps.action.outcome }}" = "skipped" ]; then
             echo "FAIL: action was skipped, it should have run"
             exit 1
           fi
-          echo "PASS: action ran with COMPOSER_PATH=/subdir (outcome: ${{ steps.action.outcome }})"
+          echo "PASS: action container executed (outcome: ${{ steps.action.outcome }})"

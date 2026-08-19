@@ -1,0 +1,33 @@
+name: test
+
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2
+      - name: Setup PHP, with composer and extensions
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2 #https://github.com/shivammathur/setup-php
+        with:
+          php-version: '8.1'
+          extensions: mbstring, bcmath
+          coverage: xdebug
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader -d ./update
+      - name: Test & publish code coverage
+        uses: paambaati/codeclimate-action@7bcf9e73c0ee77d178e72c0ec69f1a99c1afc1f3 # v2.7.5
+        env:
+          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+        with:
+          workingDirectory: update/
+          coverageCommand: vendor/bin/phpunit
+          coverageLocations: build/logs/clover.xml:clover
